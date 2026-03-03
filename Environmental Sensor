@@ -1,0 +1,113 @@
+Smart Soil Moisture Monitor with OLED Display
+
+This Arduino-based smart monitor continuously reads soil moisture levels, displays real-time data on an OLED screen,
+and triggers an LED warning light when plants need watering.
+
+Components and Supplies
+1.Arduino Uno R3
+2.Resistive Soil Moisture Sensor (Probe + LM393 Module)
+3.0.96" I2C OLED Display (SSD1306)
+4.LED (red)*1
+5.Breadboard
+6.Jumper Wires(male to male)
+7.Jumper Wires(male to female)*2
+
+Apps and Platforms
+Arduino IDE(Install: Adafruit GFX Library and Adafruit SSD1306 Library)
+
+Introduction 
+Water management is becoming increasingly critical, especially in Taiwan, where the agricultural sector faces severe challenges such as uneven rainfall, water scarcity during dry seasons, and a rapidly aging farming workforce. To address these issues, transitioning to "Smart Agriculture" is essential. The goal of this project is to automate the process of checking soil conditions, transforming raw environmental data into an easy-to-read visual interface. By integrating a sensor with a microcontroller, an OLED display, and a visual alert system, this project serves as a foundational prototype for larger automated irrigation systems. Ultimately, technologies like this can help local farmers optimize water usage, reduce manual labor, and adapt to changing climate conditions.
+
+How to Build
+Power Distribution: Connect the Arduino's 5V and GND pins to the power rails on the breadboard to share power among all components.
+Sensor Wiring: Connect the Y-shaped probe to the LM393 module. Then, connect the module's VCC and GND to the breadboard, and route its Analog Output (A0) pin to the A0 pin on the Arduino.
+OLED Display Setup: Connect the OLED's VCC and GND to the power rails. Connect the SDA pin to Arduino A4, and the SCL pin to Arduino A5 to establish I2C communication.
+LED Warning Light: Place the LED on the breadboard. Connect its cathode (short leg) to ground and its anode (long leg) to Arduino Digital Pin 6.
+Software Configuration: Upload the code via the Arduino IDE. Calibrate the sensor by testing it in both dry and wet soil to find the optimal threshold value for triggering the LED.
+
+How It Works
+This project relies on the physical principle of electrical resistance and conductivity.
+Water, especially in soil where it mixes with minerals and salts, is a good conductor of electricity. Dry soil, on the other hand, acts as an insulator with high resistance. The soil moisture sensor uses a two-pronged probe inserted into the dirt, which acts as a variable resistor. When a small electrical current is passed between the two prongs, the resistance changes based on the water content. If the soil is wet, the current flows easily (low resistance). If the soil is dry, the current struggles to flow (high resistance).
+The connected LM393 module functions as a voltage divider circuit. It translates this changing physical resistance into a measurable electrical signal—an analog voltage. The Arduino reads this analog voltage through its A0 pin, converting it into a 10-bit digital number ranging from 0 to 1023.
+In the software logic, I programmed a specific "dry threshold." The microcontroller constantly evaluates the incoming sensor data. If the soil dries out and the resistance rises past the set threshold (e.g., a reading > 600), the Arduino executes an if statement to trigger two actions simultaneously: it sends a HIGH signal to Pin 6 to illuminate the LED warning light, and it updates the I2C OLED display to read "Status: TOO DRY!". When water is added, the resistance drops, the LED turns off, and the display returns to "GOOD".
+
+Code
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#define ledPin 6
+#define sensorPin A0
+const int dryThreshold = 600;
+void setup() {
+  Serial.begin(9600);
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, LOW);
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    for(;;);
+
+  }
+
+  display.clearDisplay();
+  display.setTextColor(WHITE);
+
+}
+
+void loop() {
+
+  int sensorValue = analogRead(sensorPin);
+  Serial.print("Sensor Value: ");
+  Serial.println(sensorValue);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  display.print("Moisture Level:");
+  display.setTextSize(2);
+  display.setCursor(0, 16);
+  display.print(sensorValue);
+  display.setTextSize(1);
+  display.setCursor(0, 45);
+
+
+  if (sensorValue > dryThreshold) { 
+
+    digitalWrite(ledPin, HIGH);
+    display.print("Status: TOO DRY!");
+
+  } else {
+
+    digitalWrite(ledPin, LOW);
+    display.print("Status: GOOD");
+
+  }
+  display.display();
+  delay(500);
+}
+
+
+Troubleshooting
+1. The OLED screen is blank after uploading 
+The Cause: I2C communication requires precise pin connections and specific hardware addresses, which can vary between different screen manufacturers.
+The Solution: First, I checked the wiring and realized the SDA and SCL pins needed to be swapped to match Arduino pins A4 and A5. When that didn't work, I uploaded an "I2C Scanner" program to the Arduino. This diagnostic tool pinged the hardware and revealed that my specific screen's I2C address was 0x3C. Once I updated the address in the code (display.begin(SSD1306_SWITCHCAPVCC, 0x3C)), the display worked perfectly.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
